@@ -1,6 +1,7 @@
 import random
 from netrc import __all__
 import pyttsx3
+import os
 from tkinter import Variable
 import pygame
 from xmlrpc.client import Boolean
@@ -16,6 +17,7 @@ turnevent=pygame.event.custom_type()
 timerevent = pygame.event.custom_type()
 pygame.init()
 engine=pyttsx3.init()
+current_directory = os.path.dirname(os.path.realpath(__file__))
 class CribbageGame():
     def __init__(self):
         self.computerschoice=None
@@ -86,6 +88,12 @@ class CribbageGame():
         self.pegginglist=[]
         self.countingpileforcomputer=[]
         self.countingpileforperson=[]
+        personvalid=self.validcards(cards)
+        cardscomputervalid=self.validcards(hand)
+        if len(personvalid)==0 and len(cardscomputervalid)==0:
+            self.currentmode=CHECK_POINTS
+        else:
+            pygame.event.post(pygame.event.Event(turnevent))
     def event_loop(self):
         while True:
             event=pygame.event.get()
@@ -126,9 +134,12 @@ class CribbageGame():
                             if self.whosturn==YOU:
                                 self.personpegging(posx, posy, self.pegginglist)
                         elif self.currentmode==CHECK_POINTS:
-                            mostpoints=check_points(cards)
-                            self.points+=mostpoints
-                            print(f"We are checking points! Now person has {self.points}")
+                            if posx>400-50 and posx<400+50:
+                                if posy<800-275 and posy>800-275-50:                          
+                                    mostpoints=check_points(cards)
+                                    self.points+=mostpoints
+                                    mostcomputerpoints=check_points(hand)
+                                    self.computerspoints+=mostcomputerpoints
                     elif events.type == turnevent:
                         self.computerpegging(self.pegginglist)
                     elif events.type == timerevent:
@@ -157,7 +168,6 @@ class CribbageGame():
                     engine.say(thethetotal)
                     print(f"Total: {thethetotal}")
                     engine.runAndWait()
-
                 print(f"{card} is person's pick")
                 print(f"Your points: {self.points}, Computer's points: {self.computerspoints}")
                 self.whosturn=COMPUTER
@@ -212,14 +222,14 @@ def intstr(card):
     return cardnumber, cardsuit, value
 cardlist=[intstr(card)for card in["as","ah","ad","ac","2d","2h","2s","2c","3h","3d","3s","3c","4h","4c","4s","4d","5h","5d","5s","5c","6h","6d","6s","6c","7h","7d","7s","7c","8h","8d","8s","8c","9h","9d","9s","9c","10h","10d","10s","10c","jh","js","jd","jc","qh","qd","qs","qc","kh","kd","ks","kc"]]
 hand=random.sample(cardlist, 4)
-facedowncard=pygame.image.load("playing-card-back.jpg")
-facescards={(cardnumber,suit): pygame.image.load(f"pixil-frame-0({cardnumber}{suit}).png") for cardnumber,suit,_ in cardlist if cardnumber>10}
+facedowncard=pygame.image.load(os.path.join(current_directory, "playing-card-back.jpg"))
+facescards={(cardnumber,suit): pygame.image.load(os.path.join(current_directory, f"pixil-frame-0({cardnumber}{suit}).png")) for cardnumber,suit,_ in cardlist if cardnumber>10}
 def check_points(hand):
     for index1, (card1, _, _)in enumerate(hand):
         for index2, (card2, _, _)in enumerate(hand):
             if card1==card2:
                 if index2>index1:
-                    points=points+2
+                    points+=2
     def add(total, remainingcards):
         if total==15:
             return 2
@@ -228,14 +238,14 @@ def check_points(hand):
         point=0
         for index,(_, _, card)in enumerate(remainingcards):
             point+=add(total+card,remainingcards[index+1:])
-            return point
         for index3, (_, card3, _) in enumerate(hand):
             if hand[0][1]!=card3:
                 if index3==len(hand)-1:
                     points+=4
                 break
         else:
-            points=points+5
+            points=point+5
+        return point
     def run(lastcardseen, remainingcards, thecardsthatwevefound):
         point=0
         for index, (card, _, _) in enumerate(remainingcards):
@@ -244,7 +254,7 @@ def check_points(hand):
                 point += longer_points
                 if thecardsthatwevefound>=3 and longer_points==0:
                     point += thecardsthatwevefound
-            return point
+        return point
     def nob():
         for card, suit, _ in hand[0:-1]:
             if card==11 and suit==hand[-1][1]:
@@ -253,9 +263,7 @@ def check_points(hand):
     no=nob()
     ru=run(0, hand, 1)
     ad=add(0, hand)
-    points+=ad
-    points+=ru
-    points+=no
+    points=no+ru+ad
     return points
 def shuffle(deck):
     for i, card in enumerate(deck):
@@ -267,9 +275,9 @@ def draw_cards(cardnumber : str, cardsuit : str, positionx : float, positiony : 
     global selectedcards
     if cribbage_game.currentmode!=CHOOSING:
         if cribbage_game.currentcrib==YOU:
-            draw_facedown_cards(pygame.image.load("/home/absmall/Downloads/playing-card-back.jpg"), 100, 400, cribbage_game.screen)
+            draw_facedown_cards(facedowncard, 100, 400, cribbage_game.screen)
         else:
-            draw_facedown_cards(pygame.image.load("/home/absmall/Downloads/playing-card-back.jpg"), 100, 250, cribbage_game.screen)
+            draw_facedown_cards(facedowncard, 100, 250, cribbage_game.screen)
     drawrectangle=pygame.Rect(positionx, positiony, 100, 175)
     if highliting==True:
         redrect=pygame.Rect(positionx-2, positiony-2, 104, 179)
