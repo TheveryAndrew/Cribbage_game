@@ -25,7 +25,7 @@ class CribbageGame():
         self.theturncard=None
         self.points=0
         self.computerspoints=0
-        self.currentcrib=1#random.randint(0, 1)
+        self.currentcrib=random.randint(0, 1)
         self.whosturn=self.currentcrib^1
         self.currentmode=CHOOSING
         self.selectedcards=[]
@@ -49,6 +49,10 @@ class CribbageGame():
         smallfon = pygame.font.SysFont('dejavuserif', 15)
         tex = smallfon.render(f'{self.personname} | {self.points} \n {self.computername} | {self.computerspoints}' , True , pygame.Color(0, 0, 0))
         self.screen.blit(tex , (600, 550))
+        for i, card in enumerate(self.countingpileforperson):
+            draw_cards(card[0], card[1], 470+i*5, 400, self.screen, False)
+        for i, card in enumerate(self.countingpileforcomputer):
+            draw_cards(card[0], card[1], 470+i*5, 400-50, self.screen, False)
         if self.computerschoice:
             for cardnumber, cardsuit, _ in self.countingpileforperson:
                 draw_cards(cardnumber, cardsuit, 400, 275, self.screen, False)
@@ -57,14 +61,15 @@ class CribbageGame():
             else:
                 draw_cards(self.computerschoice[0][0], self.computerschoice[0][1], 400, 250, self.screen, False)
         if self.currentmode==CHECK_POINTS:
-            calculate_the_score=pygame.Rect(350, 525, 100, 50)          
+            calculate_the_score=pygame.Rect(350, 525, 100, 50)
             pygame.draw.rect(self.screen, pygame.Color(25, 60, 25), calculate_the_score)
             pygame.Rect(400+50, 800-275, 100, 50)
-            #posy>400-50 and posy<400+50:
-            #if posx<800-275 and posx>800-275-50:
-            calculate_text_preview=pygame.font.SysFont('dejavuserif', 20)
-            calculate_text=calculate_text_preview.render('Calculate score', True, pygame.Color(0, 0, 0))
-            self.screen.blit(calculate_text, (400, 550))
+            calculatepreview=pygame.font.SysFont('dejavuserif', 20)
+            calculate_text=calculatepreview.render('Calculate', True, pygame.Color(0, 0, 0))
+            self.screen.blit(calculate_text, (350, 535))
+            textpreview=pygame.font.SysFont('dejavuserif', 20)
+            text_text=textpreview.render('score', True, pygame.Color(0, 0, 0))
+            self.screen.blit(text_text, (350, 550))
         if self.theturncard:
             (theturncard_card, theturncard_suit, _) = self.theturncard
             draw_cards(theturncard_card, theturncard_suit, 0, 313.5, self.screen, False) 
@@ -121,7 +126,11 @@ class CribbageGame():
                                     if self.whosturn==YOU:
                                         continue
                                     else:
-                                        self.computerpegging(self.pegginglist)
+                                        self.currentdrawing='drawcomputercards'
+                                        self.theturncard=random.sample(cardlist, 1)[0]
+                                        cardlist.remove(self.theturncard)
+                                        self.currentmode=PEGGING
+                                        pygame.event.post(pygame.event.Event(turnevent))
                         elif self.currentmode==PICK_TURN_CARD:
                             if posy>=400 and posy<=575 and posx>=200 and posx<=690:
                                 self.currentdrawing='drawcomputercards'
@@ -131,11 +140,18 @@ class CribbageGame():
                             else:
                                 message="Pick a card"
                         elif self.currentmode==PEGGING:
+                            # One error to fix:
+                            # - Cards are not easy to read; outline them in black and red when they are selected
+                            # For the whole code:
+                            # - The instructions need to be written on the green bubble
                             if self.whosturn==YOU:
-                                self.personpegging(posx, posy, self.pegginglist)
+                                self.personpegging(posx, posy, self.pegginglist)                                
                         elif self.currentmode==CHECK_POINTS:
+                            # Two error to fix:
+                            # - Clicking on the "Calculate the score" is too small
+                            # - When you call check_points, the hand is empty
                             if posx>400-50 and posx<400+50:
-                                if posy<800-275 and posy>800-275-50:                          
+                                if posy<800-275 and posy>800-275-50:          
                                     mostpoints=check_points(cards)
                                     self.points+=mostpoints
                                     mostcomputerpoints=check_points(hand)
@@ -143,7 +159,7 @@ class CribbageGame():
                     elif events.type == turnevent:
                         self.computerpegging(self.pegginglist)
                     elif events.type == timerevent:
-                        removedumaque(False)           
+                        removedumaque(False)
             self.draw_card()
     def validcards(self, cards):
         global thecardsthatarevalid
@@ -189,6 +205,7 @@ class CribbageGame():
         if len(computercardsthatarevalid)>0:
             computerspick=(random.sample(computercardsthatarevalid, 1)[0])
             self.pegginglist.append(computerspick)
+            self.countingpileforcomputer.append(computerspick)
             somepoints=peggingpoints(self.pegginglist)
             self.computerspoints+=somepoints
             print(f"{computerspick} is computer's pick")
@@ -199,6 +216,7 @@ class CribbageGame():
         else:
             if len(validcomputer)>0:
                 self.message="your opponent can't play so it is your turn"
+                self.whosturn=YOU
             else:
                 self.points+=1
                 self.godeclaration()
@@ -279,10 +297,12 @@ def draw_cards(cardnumber : str, cardsuit : str, positionx : float, positiony : 
         else:
             draw_facedown_cards(facedowncard, 100, 250, cribbage_game.screen)
     drawrectangle=pygame.Rect(positionx, positiony, 100, 175)
+    redrect=pygame.Rect(positionx-2, positiony-2, 104, 179)
     if highliting==True:
-        redrect=pygame.Rect(positionx-2, positiony-2, 104, 179)
         pygame.draw.rect(surface, pygame.Color(255, 0, 0), redrect)
-    pygame.draw.rect(surface, pygame.Color(0, 255, 0), drawrectangle)
+    else:
+        pygame.draw.rect(surface, pygame.Color(0, 0, 0), redrect)
+    pygame.draw.rect(surface, pygame.Color(190, 190, 190), drawrectangle)
     font = pygame.font.SysFont('dejavuserif', 18)
     if cardnumber > 10:
         surface.blit(facescards[cardnumber, cardsuit], pygame.Rect(positionx, positiony, 100, 175))
