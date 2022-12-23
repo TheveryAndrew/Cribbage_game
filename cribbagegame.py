@@ -30,7 +30,7 @@ class CribbageGame():
         self.currentmode=CHOOSING
         self.selectedcards=[]
         self.pegginglist=[]
-        self.message=[]
+        self.message=""
         self.countingpileforperson=[]
         self.rollingballs=['dumaque', 'babies', 'bellies']
         self.criblist=[]
@@ -85,9 +85,25 @@ class CribbageGame():
             if len(self.selectedcards)==2:
                     smallfont = pygame.font.SysFont('dejavuserif',15)
                     text = smallfont.render('Send to crib' , True , pygame.Color(0, 0, 0))
-                    self.screen.blit(text , (700, 700))
+                    self.screen.blit(text , (700, 700))    
         rectu=pygame.Rect(800/2, 800/2, 100, 100)
         pygame.draw.rect(self.screen, pygame.Color(0, 255, 0), rectu)
+        messagepreview=pygame.font.SysFont('dejavuserif', 14)
+        if self.message=="Pick a card":
+            calculate_message=messagepreview.render(self.message, True, pygame.Color(0, 0, 0))
+            self.screen.blit(calculate_message, (400, 400))
+        elif self.message=="your opponent can't play so it is your turn":
+            for index, words in enumerate(["your opponent", "can't play so", "it's your turn"]):
+                calculate_message=messagepreview.render(words, True, pygame.Color(0, 0, 0))
+                self.screen.blit(calculate_message, (400, 400 + index*14))
+        elif self.message=="you cannot play that card, play a different card":
+            for index, words in enumerate(["you cannot", "play tht card", "play a", "different card"]):
+                calculate_message=messagepreview.render(words, True, pygame.Color(0, 0, 0))
+                self.screen.blit(calculate_message, (400, 400 + index*14))
+        elif self.message==f"Pick 2 cards to throw away and make the crib. {self.computername} is also going to pick 2 cards":
+            for index, words in enumerate(["Pick 2 cards", "to throw away", "and make the", f"crib {self.computername}", "is also going to", "pick 2 cards"]):
+                calculate_message=messagepreview.render(words, True, pygame.Color(0, 0, 0))
+                self.screen.blit(calculate_message, (400, 400 + index*14))
         pygame.display.update()
     def godeclaration(self):
         self.pegginglist=[]
@@ -107,7 +123,7 @@ class CribbageGame():
                     if events.type==pygame.MOUSEBUTTONUP:
                         posx, posy = pygame.mouse.get_pos()
                         if cribbage_game.currentmode==CHOOSING:
-                            message=f"Pick 2 cards to throw away and make the crib. {self.computername} is also going to pick 2 cards"
+                            self.message=f"Pick 2 cards to throw away and make the crib. {self.computername} is also going to pick 2 cards"
                             if (selectedcard := clickcard(posx, posy, 6))!=None:
                                 card=cards[selectedcard]
                                 if selectedcard in self.selectedcards:
@@ -138,18 +154,17 @@ class CribbageGame():
                                 cardlist.remove(self.theturncard)
                                 self.currentmode=PEGGING
                             else:
-                                message="Pick a card"
+                                self.message="Pick a card"
                         elif self.currentmode==PEGGING:
-                            # One error to fix:
-                            # - Cards are not easy to read; outline them in black and red when they are selected
                             # For the whole code:
-                            # - The instructions need to be written on the green bubble
+                            # - The instructions areoutside the green bubble sometimes
                             if self.whosturn==YOU:
                                 self.personpegging(posx, posy, self.pegginglist)                                
                         elif self.currentmode==CHECK_POINTS:
-                            # Two error to fix:
+                            # Three error to fix:
                             # - Clicking on the "Calculate the score" is too small
                             # - When you call check_points, the hand is empty
+                            # - Button "Calculate the score" does not disappear when job is done
                             if posx>400-50 and posx<400+50:
                                 if posy<800-275 and posy>800-275-50:          
                                     mostpoints=check_points(cards)
@@ -182,10 +197,7 @@ class CribbageGame():
                 if somepoints > 0:
                     thethetotal=self.peggingTotal(self.pegginglist)
                     engine.say(thethetotal)
-                    print(f"Total: {thethetotal}")
                     engine.runAndWait()
-                print(f"{card} is person's pick")
-                print(f"Your points: {self.points}, Computer's points: {self.computerspoints}")
                 self.whosturn=COMPUTER
                 pygame.event.post(pygame.event.Event(turnevent))
             else:
@@ -208,8 +220,6 @@ class CribbageGame():
             self.countingpileforcomputer.append(computerspick)
             somepoints=peggingpoints(self.pegginglist)
             self.computerspoints+=somepoints
-            print(f"{computerspick} is computer's pick")
-            print(f"Your points: {self.points}, Computer's points: {self.computerspoints}")
             del hand[hand.index(computerspick)]
             self.countingpileforcomputer.append(computerspick)
             self.whosturn=YOU
@@ -291,6 +301,7 @@ def shuffle(deck):
         deck[random_position]=cardposition
 def draw_cards(cardnumber : str, cardsuit : str, positionx : float, positiony : float, surface : Variable, highliting : Boolean):
     global selectedcards
+
     if cribbage_game.currentmode!=CHOOSING:
         if cribbage_game.currentcrib==YOU:
             draw_facedown_cards(facedowncard, 100, 400, cribbage_game.screen)
@@ -309,7 +320,8 @@ def draw_cards(cardnumber : str, cardsuit : str, positionx : float, positiony : 
     else:
         for position in positions[cardnumber]:
             img = font.render(suit[cardsuit], True, pygame.Color(0, 0, 255))
-            surface.blit(img, pygame.Rect(positionx+position[0], positiony+position[1], img.get_width(), img.get_height()))
+            surface.blit(img, pygame.Rect(positionx+position[0], positiony+position[1], img.get_width(), img.get_height())) 
+
 def draw_facedown_cards(card, positionx, positiony, surface):
     surface.blit(card, pygame.Rect(positionx, positiony, 100, 175))
 def deal(deck : list):
