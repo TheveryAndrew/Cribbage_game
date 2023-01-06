@@ -77,14 +77,14 @@ class CribbageGame():
             if self.currentdrawing=='drawcomputercards':
                 draw_facedown_cards(facedowncard, 100+50*index, 50, self.screen)
             elif self.currentdrawing=='drawdeck':
-                for i in range(0, 52-12):
+                for i in range(0,52-12):
                     #52 is the number of cards and 12 is the number of cards that the computer has already dealt.
                     draw_facedown_cards(facedowncard, 200+(i*10), 400, self.screen) 
                     draw_facedown_cards(facedowncard, 100+50*index, 50, self.screen)
             draw_cards(card, cardsuit, 100+50*index, 575, self.screen, index in self.selectedcards)
             if len(self.selectedcards)==2:
-                    smallfont = pygame.font.SysFont('dejavuserif',15)
-                    text = smallfont.render('Send to crib' , True , pygame.Color(0, 0, 0))
+                    smallfont=pygame.font.SysFont('dejavuserif',15)
+                    text = smallfont.render('Send to crib',True,pygame.Color(0, 0, 0))
                     self.screen.blit(text , (700, 700))    
         rectu=pygame.Rect(800/2, 800/2, 100, 100)
         pygame.draw.rect(self.screen, pygame.Color(0, 255, 0), rectu)
@@ -156,21 +156,18 @@ class CribbageGame():
                             else:
                                 self.message="Pick a card"
                         elif self.currentmode==PEGGING:
-                            # For the whole code:
-                            # - The instructions areoutside the green bubble sometimes
                             if self.whosturn==YOU:
                                 self.personpegging(posx, posy, self.pegginglist)                                
                         elif self.currentmode==CHECK_POINTS:
-                            # Three error to fix:
-                            # - Clicking on the "Calculate the score" is too small
-                            # - When you call check_points, the hand is empty
+                            # Two error to fix:
                             # - Button "Calculate the score" does not disappear when job is done
-                            if posx>400-50 and posx<400+50:
-                                if posy<800-275 and posy>800-275-50:          
-                                    mostpoints=check_points(cards)
-                                    self.points+=mostpoints
-                                    mostcomputerpoints=check_points(hand)
-                                    self.computerspoints+=mostcomputerpoints
+                            # - There is only one round, go up until someone hits 120 points
+                            yesorno=clickbutton(posx, posy, "calculate score")
+                            if yesorno==True:
+                                mostpoints=check_points(self.countingpileforperson)
+                                self.points+=mostpoints
+                                mostcomputerpoints=check_points(self.countingpileforcomputer)
+                                self.computerspoints+=mostcomputerpoints
                     elif events.type == turnevent:
                         self.computerpegging(self.pegginglist)
                     elif events.type == timerevent:
@@ -229,8 +226,7 @@ class CribbageGame():
                 self.whosturn=YOU
             else:
                 self.points+=1
-                self.godeclaration()
-                
+                self.godeclaration()            
 def intstr(card):
     if card=="10s"or card=="10c"or card=="10h"or card=="10d":
         cardnumber=10
@@ -250,14 +246,16 @@ def intstr(card):
     return cardnumber, cardsuit, value
 cardlist=[intstr(card)for card in["as","ah","ad","ac","2d","2h","2s","2c","3h","3d","3s","3c","4h","4c","4s","4d","5h","5d","5s","5c","6h","6d","6s","6c","7h","7d","7s","7c","8h","8d","8s","8c","9h","9d","9s","9c","10h","10d","10s","10c","jh","js","jd","jc","qh","qd","qs","qc","kh","kd","ks","kc"]]
 hand=random.sample(cardlist, 4)
+print(hand)
 facedowncard=pygame.image.load(os.path.join(current_directory, "playing-card-back.jpg"))
 facescards={(cardnumber,suit): pygame.image.load(os.path.join(current_directory, f"pixil-frame-0({cardnumber}{suit}).png")) for cardnumber,suit,_ in cardlist if cardnumber>10}
 def check_points(hand):
+    pairs = 0
     for index1, (card1, _, _)in enumerate(hand):
         for index2, (card2, _, _)in enumerate(hand):
             if card1==card2:
                 if index2>index1:
-                    points+=2
+                    pairs+=2
     def add(total, remainingcards):
         if total==15:
             return 2
@@ -269,10 +267,10 @@ def check_points(hand):
         for index3, (_, card3, _) in enumerate(hand):
             if hand[0][1]!=card3:
                 if index3==len(hand)-1:
-                    points+=4
+                    point+=4
                 break
         else:
-            points=point+5
+            point=point+5
         return point
     def run(lastcardseen, remainingcards, thecardsthatwevefound):
         point=0
@@ -291,42 +289,41 @@ def check_points(hand):
     no=nob()
     ru=run(0, hand, 1)
     ad=add(0, hand)
-    points=no+ru+ad
-    return points
+    point=pairs+no+ru+ad
+    return point
 def shuffle(deck):
     for i, card in enumerate(deck):
         random_position=random.randint(0, len(deck))
         cardposition=deck[card]
         deck[card]=deck[random_position]
         deck[random_position]=cardposition
-def draw_cards(cardnumber : str, cardsuit : str, positionx : float, positiony : float, surface : Variable, highliting : Boolean):
+def draw_cards(cardnumber:str,cardsuit:str,positionx:float,positiony:float,surface:Variable,highliting:Boolean):
     global selectedcards
-
     if cribbage_game.currentmode!=CHOOSING:
         if cribbage_game.currentcrib==YOU:
-            draw_facedown_cards(facedowncard, 100, 400, cribbage_game.screen)
+            draw_facedown_cards(facedowncard,100,400,cribbage_game.screen)
         else:
-            draw_facedown_cards(facedowncard, 100, 250, cribbage_game.screen)
-    drawrectangle=pygame.Rect(positionx, positiony, 100, 175)
-    redrect=pygame.Rect(positionx-2, positiony-2, 104, 179)
+            draw_facedown_cards(facedowncard,100,250,cribbage_game.screen)
+    drawrectangle=pygame.Rect(positionx,positiony,100,175)
+    redrect=pygame.Rect(positionx-2,positiony-2,104,179)
     if highliting==True:
-        pygame.draw.rect(surface, pygame.Color(255, 0, 0), redrect)
+        pygame.draw.rect(surface, pygame.Color(255,0,0),redrect)
     else:
-        pygame.draw.rect(surface, pygame.Color(0, 0, 0), redrect)
-    pygame.draw.rect(surface, pygame.Color(190, 190, 190), drawrectangle)
-    font = pygame.font.SysFont('dejavuserif', 18)
-    if cardnumber > 10:
-        surface.blit(facescards[cardnumber, cardsuit], pygame.Rect(positionx, positiony, 100, 175))
+        pygame.draw.rect(surface,pygame.Color(0,0,0),redrect)
+    pygame.draw.rect(surface,pygame.Color(190,190,190),drawrectangle)
+    font=pygame.font.SysFont('dejavuserif',18)
+    if cardnumber>10:
+        surface.blit(facescards[cardnumber,cardsuit],pygame.Rect(positionx,positiony,100,175))
     else:
         for position in positions[cardnumber]:
-            img = font.render(suit[cardsuit], True, pygame.Color(0, 0, 255))
-            surface.blit(img, pygame.Rect(positionx+position[0], positiony+position[1], img.get_width(), img.get_height())) 
-
+            img = font.render(suit[cardsuit],True,pygame.Color(0, 0, 255))
+            surface.blit(img, pygame.Rect(positionx+position[0], positiony+position[1], img.get_width(), img.get_height()))
 def draw_facedown_cards(card, positionx, positiony, surface):
     surface.blit(card, pygame.Rect(positionx, positiony, 100, 175))
 def deal(deck : list):
     global cards
     cards=random.sample(deck, 6)
+    print(cards)
     for card in cards:
         deck.remove(card)
 def removedumaque(is_there_a_dumaque : Boolean):
@@ -350,7 +347,7 @@ def clickbutton(posx : Variable or int, posy : Variable or int, sendtocrib_or_ca
         return False
     elif sendtocrib_or_calculate_score=="calculate score":
         if posx>400-50 and posx<400+50:
-            if posy<800-275 and posy>800-275-50:
+            if posy<611 and posy>527:
                 return True
         return False
 def peggingpoints(listofpeggingcards):
@@ -358,8 +355,8 @@ def peggingpoints(listofpeggingcards):
     lastcard=listofpeggingcards[-1][0]
     returnation=0
     for i in range(0, len(listofpeggingcards)-1):
-        if listofpeggingcards[-2-i][0] != lastcard:
-            returnation = i*(i+1)
+        if listofpeggingcards[-2-i][0]!=lastcard:
+            returnation=i*(i+1)
             break
     else:
         returnation=(len(listofpeggingcards)-1)*(len(listofpeggingcards))
@@ -384,8 +381,8 @@ def peggingpoints(listofpeggingcards):
     if len(listofpeggingcards)-i >= 3:
         returnation += len(listofpeggingcards)-i
     return returnation
-if __name__ == '__main__':
-    cribbage_game = CribbageGame()
+if __name__=='__main__':
+    cribbage_game=CribbageGame()
     print("Let's play cribbage")
     time.sleep(2)
     suit={'c':'♣','h':'♥','d':'♦','s':'♠'}
