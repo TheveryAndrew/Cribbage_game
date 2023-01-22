@@ -5,6 +5,7 @@ import os
 from tkinter import Variable
 import pygame
 from xmlrpc.client import Boolean
+from fontTools.ttLib import TTFont
 import time
 import functools
 CHOOSING=1
@@ -40,6 +41,45 @@ class CribbageGame():
         self.personname=0
         self.computername=random.choices(['James','Robert','John','Michael','David','William','Richard','Joseph','Thomas','Charles', 'Christopher', 'Daniel', 'Mattew', 'Anthony', 'Mark', 'Donald', 'Steven', 'Paul', 'Andrew', 'Joshua'])[0]
         self.screen = pygame.display.set_mode((800,800))
+
+        fonts = map(lambda x: (x, pygame.font.match_font(x)), pygame.font.get_fonts())
+
+        def char_in_font(unicode_char, font):
+            for cmap in font['cmap'].tables:
+                if cmap.isUnicode():
+                    if ord(unicode_char) in cmap.cmap:
+                        return True
+            return False
+
+        def find_font_for_char(char):
+            for font, fontpath in fonts:
+                ttf = TTFont(fontpath, fontNumber=0)   # specify the path to the font in question
+                if char_in_font(char, ttf):
+                    return font
+
+        self.cardfont = find_font_for_char("♣")
+
+    def draw_cards(self, cardnumber:str,cardsuit:str,positionx:float,positiony:float,surface:Variable,highliting:Boolean):
+        global selectedcards
+        if cribbage_game.currentmode!=CHOOSING:
+            if cribbage_game.currentcrib==YOU:
+                draw_facedown_cards(facedowncard,100,400,cribbage_game.screen)
+            else:
+                draw_facedown_cards(facedowncard,100,250,cribbage_game.screen)
+        drawrectangle=pygame.Rect(positionx,positiony,100,175)
+        redrect=pygame.Rect(positionx-2,positiony-2,104,179)
+        if highliting==True:
+            pygame.draw.rect(surface, pygame.Color(255,0,0),redrect)
+        else:
+            pygame.draw.rect(surface,pygame.Color(0,0,0),redrect)
+        pygame.draw.rect(surface,pygame.Color(190,190,190),drawrectangle)
+        font=pygame.font.SysFont(self.cardfont,18)
+        if cardnumber>10:
+            surface.blit(facescards[cardnumber,cardsuit],pygame.Rect(positionx,positiony,100,175))
+        else:
+            for position in positions[cardnumber]:
+                img = font.render(suit[cardsuit],True,pygame.Color(0, 0, 255))
+                surface.blit(img, pygame.Rect(positionx+position[0], positiony+position[1], img.get_width(), img.get_height()))
     def draw_card(self):
         global cards
         self.screen.fill(pygame.Color(0, 0, 255))
@@ -50,16 +90,16 @@ class CribbageGame():
         tex = smallfon.render(f'{self.personname} | {self.points} \n {self.computername} | {self.computerspoints}' , True , pygame.Color(0, 0, 0))
         self.screen.blit(tex , (600, 550))
         for i, card in enumerate(self.countingpileforperson):
-            draw_cards(card[0], card[1], 470+i*5, 400, self.screen, False)
+            self.draw_cards(card[0], card[1], 470+i*5, 400, self.screen, False)
         for i, card in enumerate(self.countingpileforcomputer):
-            draw_cards(card[0], card[1], 470+i*5, 400-50, self.screen, False)
+            self.draw_cards(card[0], card[1], 470+i*5, 400-50, self.screen, False)
         if self.computerschoice:
             for cardnumber, cardsuit, _ in self.countingpileforperson:
-                draw_cards(cardnumber, cardsuit, 400, 275, self.screen, False)
+                self.draw_cards(cardnumber, cardsuit, 400, 275, self.screen, False)
             if self.computerschoice=='10h' or self.computerschoice=='10d' or self.computerschoice=='10s' or self.computerschoice=='10c':
-                draw_cards(self.computerschoice[0]+self.computerschoice[1], self.computerschoice[2], 400, 275, self.screen, False)
+                self.draw_cards(self.computerschoice[0]+self.computerschoice[1], self.computerschoice[2], 400, 275, self.screen, False)
             else:
-                draw_cards(self.computerschoice[0][0], self.computerschoice[0][1], 400, 250, self.screen, False)
+                self.draw_cards(self.computerschoice[0][0], self.computerschoice[0][1], 400, 250, self.screen, False)
         if self.currentmode==CHECK_POINTS:
             calculate_the_score=pygame.Rect(350, 525, 100, 50)
             pygame.draw.rect(self.screen, pygame.Color(25, 60, 25), calculate_the_score)
@@ -72,7 +112,7 @@ class CribbageGame():
             self.screen.blit(text_text, (350, 550))
         if self.theturncard:
             (theturncard_card, theturncard_suit, _) = self.theturncard
-            draw_cards(theturncard_card, theturncard_suit, 0, 313.5, self.screen, False) 
+            self.draw_cards(theturncard_card, theturncard_suit, 0, 313.5, self.screen, False) 
         for index, (card, cardsuit, _) in enumerate(cards):
             if self.currentdrawing=='drawcomputercards':
                 draw_facedown_cards(facedowncard, 100+50*index, 50, self.screen)
@@ -81,7 +121,7 @@ class CribbageGame():
                     #52 is the number of cards and 12 is the number of cards that the computer has already dealt.
                     draw_facedown_cards(facedowncard, 200+(i*10), 400, self.screen) 
                     draw_facedown_cards(facedowncard, 100+50*index, 50, self.screen)
-            draw_cards(card, cardsuit, 100+50*index, 575, self.screen, index in self.selectedcards)
+            self.draw_cards(card, cardsuit, 100+50*index, 575, self.screen, index in self.selectedcards)
             if len(self.selectedcards)==2:
                     smallfont=pygame.font.SysFont('dejavuserif',15)
                     text = smallfont.render('Send to crib',True,pygame.Color(0, 0, 0))
@@ -297,27 +337,6 @@ def shuffle(deck):
         cardposition=deck[card]
         deck[card]=deck[random_position]
         deck[random_position]=cardposition
-def draw_cards(cardnumber:str,cardsuit:str,positionx:float,positiony:float,surface:Variable,highliting:Boolean):
-    global selectedcards
-    if cribbage_game.currentmode!=CHOOSING:
-        if cribbage_game.currentcrib==YOU:
-            draw_facedown_cards(facedowncard,100,400,cribbage_game.screen)
-        else:
-            draw_facedown_cards(facedowncard,100,250,cribbage_game.screen)
-    drawrectangle=pygame.Rect(positionx,positiony,100,175)
-    redrect=pygame.Rect(positionx-2,positiony-2,104,179)
-    if highliting==True:
-        pygame.draw.rect(surface, pygame.Color(255,0,0),redrect)
-    else:
-        pygame.draw.rect(surface,pygame.Color(0,0,0),redrect)
-    pygame.draw.rect(surface,pygame.Color(190,190,190),drawrectangle)
-    font=pygame.font.SysFont('dejavuserif',18)
-    if cardnumber>10:
-        surface.blit(facescards[cardnumber,cardsuit],pygame.Rect(positionx,positiony,100,175))
-    else:
-        for position in positions[cardnumber]:
-            img = font.render(suit[cardsuit],True,pygame.Color(0, 0, 255))
-            surface.blit(img, pygame.Rect(positionx+position[0], positiony+position[1], img.get_width(), img.get_height()))
 def draw_facedown_cards(card, positionx, positiony, surface):
     surface.blit(card, pygame.Rect(positionx, positiony, 100, 175))
 def deal(deck : list):
