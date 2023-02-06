@@ -3,6 +3,7 @@ from netrc import __all__
 import pyttsx3
 import os
 import pygame
+from fontTools.ttLib import TTFont
 import functools
 CHOOSING=1
 PICK_TURN_CARD=2
@@ -38,6 +39,70 @@ def intstr(card):
     value=10 if cardnumber>=10 else cardnumber
     return cardnumber, cardsuit, value
 
+def clickcard(posx : int, posy : int, cardsinhand : int):
+    posx=(posx-100)/50
+    if posx > cardsinhand-1 and posx<cardsinhand+1: posx=cardsinhand-1
+    if posx>=0 and posx<cardsinhand+1:
+        if posy>575 and posy<750:
+            posx=int(posx)
+            return posx
+    return None
+
+def clickbutton(posx : int, posy : int, sendtocrib_or_calculate_score: str):
+    if sendtocrib_or_calculate_score=="sendtocrib":
+        if posx>700 and posx<785:
+            if posy>700 and posy<785:
+                return True
+        return False
+    elif sendtocrib_or_calculate_score=="calculate score":
+        if posx>400-50 and posx<400+50:
+            if posy<611 and posy>527:
+                return True
+        return False
+
+def check_points(hand):
+    pairs = 0
+    for index1, (card1, _, _)in enumerate(hand):
+        for index2, (card2, _, _)in enumerate(hand):
+            if card1==card2:
+                if index2>index1:
+                    pairs+=2
+    def add(total, remainingcards):
+        if total==15:
+            return 2
+        elif total>15:
+            return 0
+        point=0
+        for index,(_, _, card)in enumerate(remainingcards):
+            point+=add(total+card,remainingcards[index+1:])
+        for index3, (_, card3, _) in enumerate(hand):
+            if hand[0][1]!=card3:
+                if index3==len(hand)-1:
+                    point+=4
+                break
+        else:
+            point=point+5
+        return point
+    def run(lastcardseen, remainingcards, thecardsthatwevefound):
+        point=0
+        for index, (card, _, _) in enumerate(remainingcards):
+            if lastcardseen==card-1 or lastcardseen==0:
+                longer_points=run(card, remainingcards[0:index]+remainingcards[index+1:], thecardsthatwevefound+1)
+                point += longer_points
+                if thecardsthatwevefound>=3 and longer_points==0:
+                    point += thecardsthatwevefound
+        return point
+    def nob():
+        for card, suit, _ in hand[0:-1]:
+            if card==11 and suit==hand[-1][1]:
+                return 1
+        return 0
+    no=nob()
+    ru=run(0, hand, 1)
+    ad=add(0, hand)
+    point=pairs+no+ru+ad
+    return point
+
 class CribbageGame():
     def __init__(self):
         self.computerschoice=None
@@ -60,6 +125,24 @@ class CribbageGame():
         self.personname=0
         self.computername=random.choices(['James','Robert','John','Michael','David','William','Richard','Joseph','Thomas','Charles', 'Christopher', 'Daniel', 'Mattew', 'Anthony', 'Mark', 'Donald', 'Steven', 'Paul', 'Andrew', 'Joshua'])[0]
         self.screen = pygame.display.set_mode((800,800))
+
+        fonts = map(lambda x: (x, pygame.font.match_font(x)), pygame.font.get_fonts())
+
+        def char_in_font(unicode_char, font):
+            for cmap in font['cmap'].tables:
+                if cmap.isUnicode():
+                    if ord(unicode_char) in cmap.cmap:
+                        return True
+            return False
+
+        def find_font_for_char(char):
+            for font, fontpath in fonts:
+                ttf = TTFont(fontpath, fontNumber=0)   # specify the path to the font in question
+                if char_in_font(char, ttf):
+                    return font
+
+        self.cardfont = find_font_for_char("♣")
+
     def draw_cards(self):
         global cards
         self.screen.fill(pygame.Color(0, 0, 255))
@@ -144,13 +227,13 @@ class CribbageGame():
                         posx, posy = pygame.mouse.get_pos()
                         if self.currentmode==CHOOSING:
                             self.message=f"Pick 2 cards to throw away and make the crib. {self.computername} is also going to pick 2 cards"
-                            if (selectedcard := self.clickcard(posx, posy, 6))!=None:
+                            if (selectedcard := clickcard(posx, posy, 6))!=None:
                                 card=cards[selectedcard]
                                 if selectedcard in self.selectedcards:
                                     self.selectedcards.remove(selectedcard)
                                 elif len(self.selectedcards)<2:
                                     self.selectedcards.append(selectedcard)
-                            elif self.clickbutton(posx, posy, "sendtocrib"):
+                            elif clickbutton(posx, posy, "sendtocrib"):
                                 if len(self.selectedcards)==2:
                                     self.currentmode=PICK_TURN_CARD
                                     self.criblist.append(self.selectedcards)
@@ -182,11 +265,11 @@ class CribbageGame():
                             # Two error to fix:
                             # - Button "Calculate the score" does not disappear when job is done
                             # - There is only one round, go up until someone hits 120 points
-                            yesorno=self.clickbutton(posx, posy, "calculate score")
+                            yesorno=clickbutton(posx, posy, "calculate score")
                             if yesorno==True:
-                                mostpoints=self.check_points(self.countingpileforperson)
+                                mostpoints=check_points(self.countingpileforperson)
                                 self.points+=mostpoints
-                                mostcomputerpoints=self.check_points(self.countingpileforcomputer)
+                                mostcomputerpoints=check_points(self.countingpileforcomputer)
                                 self.computerspoints+=mostcomputerpoints
                                 if self.points<120 and self.computerspoints<120:
                                     self.currentmode==CHOOSING
@@ -208,7 +291,7 @@ class CribbageGame():
         thecardsthatarevalid = [card for card in cards if card[-1] + total <=31]
         return thecardsthatarevalid
     def personpegging(self, posx : float, posy : float, listofpeggingcards : list):
-        peggingcard=self.clickcard(posx, posy, len(cards))       
+        peggingcard=clickcard(posx, posy, len(cards))       
         total= self.peggingTotal(self.pegginglist)
         cardsthatarevalid = [index for index, card in enumerate(cards) if card[-1] + total <=31]
         computeruvalid=self.validcards(self.hand)
@@ -261,48 +344,6 @@ class CribbageGame():
     print(hand)
     facedowncard=pygame.image.load(os.path.join(current_directory, "playing-card-back.jpg"))
     facescards={(cardnumber,suit): pygame.image.load(os.path.join(current_directory, f"pixil-frame-0({cardnumber}{suit}).png")) for cardnumber,suit,_ in cardlist if cardnumber>10}
-    def check_points(hand):
-        pairs = 0
-        for index1, (card1, _, _)in enumerate(hand):
-            for index2, (card2, _, _)in enumerate(hand):
-                if card1==card2:
-                    if index2>index1:
-                        pairs+=2
-        def add(total, remainingcards):
-            if total==15:
-                return 2
-            elif total>15:
-                return 0
-            point=0
-            for index,(_, _, card)in enumerate(remainingcards):
-                point+=add(total+card,remainingcards[index+1:])
-            for index3, (_, card3, _) in enumerate(hand):
-                if hand[0][1]!=card3:
-                    if index3==len(hand)-1:
-                        point+=4
-                    break
-            else:
-                point=point+5
-            return point
-        def run(lastcardseen, remainingcards, thecardsthatwevefound):
-            point=0
-            for index, (card, _, _) in enumerate(remainingcards):
-                if lastcardseen==card-1 or lastcardseen==0:
-                    longer_points=run(card, remainingcards[0:index]+remainingcards[index+1:], thecardsthatwevefound+1)
-                    point += longer_points
-                    if thecardsthatwevefound>=3 and longer_points==0:
-                        point += thecardsthatwevefound
-            return point
-        def nob():
-            for card, suit, _ in hand[0:-1]:
-                if card==11 and suit==hand[-1][1]:
-                    return 1
-            return 0
-        no=nob()
-        ru=run(0, hand, 1)
-        ad=add(0, hand)
-        point=pairs+no+ru+ad
-        return point
     def shuffle(deck):
         for i, card in enumerate(deck):
             random_position=random.randint(0, len(deck))
@@ -315,7 +356,7 @@ class CribbageGame():
             if self.currentcrib==YOU:
                 draw_facedown_cards(self.facedowncard,100,400,self.screen)
             else:
-                draw_facedown_cards(self.facedowncard,100,250,self.cribbage_game.screen)
+                draw_facedown_cards(self.facedowncard,100,250,self.screen)
         drawrectangle=pygame.Rect(positionx,positiony,100,175)
         redrect=pygame.Rect(positionx-2,positiony-2,104,179)
         if highliting==True:
@@ -323,7 +364,7 @@ class CribbageGame():
         else:
             pygame.draw.rect(surface,pygame.Color(0,0,0),redrect)
         pygame.draw.rect(surface,pygame.Color(190,190,190),drawrectangle)
-        font=pygame.font.SysFont('dejavuserif',18)
+        font=pygame.font.SysFont(self.cardfont,18)
         if cardnumber>10:
             surface.blit(self.facescards[cardnumber,cardsuit],pygame.Rect(positionx,positiony,100,175))
         else:
@@ -372,22 +413,4 @@ class CribbageGame():
         if len(listofpeggingcards)-i >= 3:
             returnation += len(listofpeggingcards)-i
         return returnation
-    def clickcard(posx : int, posy : int, cardsinhand : int):
-        posx=(posx-100)/50
-        if posx > cardsinhand-1 and posx<cardsinhand+1: posx=cardsinhand-1
-        if posx>=0 and posx<cardsinhand+1:
-            if posy>575 and posy<750:
-                posx=int(posx)
-                return posx
-        return None
-    def clickbutton(posx : int, posy : int, sendtocrib_or_calculate_score: str):
-        if sendtocrib_or_calculate_score=="sendtocrib":
-            if posx>700 and posx<785:
-                if posy>700 and posy<785:
-                    return True
-            return False
-        elif sendtocrib_or_calculate_score=="calculate score":
-            if posx>400-50 and posx<400+50:
-                if posy<611 and posy>527:
-                    return True
-            return False
+
