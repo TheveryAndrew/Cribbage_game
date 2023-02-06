@@ -62,7 +62,7 @@ class CribbageGame():
         self.personname=0
         self.computername=random.choices(['James','Robert','John','Michael','David','William','Richard','Joseph','Thomas','Charles', 'Christopher', 'Daniel', 'Mattew', 'Anthony', 'Mark', 'Donald', 'Steven', 'Paul', 'Andrew', 'Joshua'])[0]
         self.screen = pygame.display.set_mode((800,800))
-    def draw_card(self):
+    def draw_cards(self):
         global cards
         self.screen.fill(pygame.Color(0, 0, 255))
         smallfont = pygame.font.SysFont('dejavuserif', 15)
@@ -72,16 +72,16 @@ class CribbageGame():
         tex = smallfon.render(f'{self.personname} | {self.points} \n {self.computername} | {self.computerspoints}' , True , pygame.Color(0, 0, 0))
         self.screen.blit(tex , (600, 550))
         for i, card in enumerate(self.countingpileforperson):
-            self.draw_cards(card[0], card[1], 470+i*5, 400, self.screen, False)
+            self.draw_card(card[0], card[1], 470+i*5, 400, self.screen, False)
         for i, card in enumerate(self.countingpileforcomputer):
-            self.draw_cards(card[0], card[1], 470+i*5, 400-50, self.screen, False)
+            self.draw_card(card[0], card[1], 470+i*5, 400-50, self.screen, False)
         if self.computerschoice:
             for cardnumber, cardsuit, _ in self.countingpileforperson:
-                self.draw_cards(cardnumber, cardsuit, 400, 275, self.screen, False)
+                self.draw_card(cardnumber, cardsuit, 400, 275, self.screen, False)
             if self.computerschoice=='10h' or self.computerschoice=='10d' or self.computerschoice=='10s' or self.computerschoice=='10c':
-                self.draw_cards(self.computerschoice[0]+self.computerschoice[1], self.computerschoice[2], 400, 275, self.screen, False)
+                self.draw_card(self.computerschoice[0]+self.computerschoice[1], self.computerschoice[2], 400, 275, self.screen, False)
             else:
-                self.draw_cards(self.computerschoice[0][0], self.computerschoice[0][1], 400, 250, self.screen, False)
+                self.draw_card(self.computerschoice[0][0], self.computerschoice[0][1], 400, 250, self.screen, False)
         if self.currentmode==CHECK_POINTS:
             calculate_the_score=pygame.Rect(350, 525, 100, 50)
             pygame.draw.rect(self.screen, pygame.Color(25, 60, 25), calculate_the_score)
@@ -94,7 +94,7 @@ class CribbageGame():
             self.screen.blit(text_text, (350, 550))
         if self.theturncard:
             (theturncard_card, theturncard_suit, _) = self.theturncard
-            self.draw_cards(theturncard_card, theturncard_suit, 0, 313.5, self.screen, False) 
+            self.draw_card(theturncard_card, theturncard_suit, 0, 313.5, self.screen, False) 
         for index, (card, cardsuit, _) in enumerate(cards):
             if self.currentdrawing=='drawcomputercards':
                 draw_facedown_cards(self.facedowncard, 100+50*index, 50, self.screen)
@@ -103,7 +103,7 @@ class CribbageGame():
                     #52 is the number of cards and 12 is the number of cards that the computer has already dealt.
                     draw_facedown_cards(self.facedowncard, 200+(i*10), 400, self.screen) 
                     draw_facedown_cards(self.facedowncard, 100+50*index, 50, self.screen)
-            self.draw_cards(card, cardsuit, 100+50*index, 575, self.screen, index in self.selectedcards)
+            self.draw_card(card, cardsuit, 100+50*index, 575, self.screen, index in self.selectedcards)
             if len(self.selectedcards)==2:
                     smallfont=pygame.font.SysFont('dejavuserif',15)
                     text = smallfont.render('Send to crib',True,pygame.Color(0, 0, 0))
@@ -196,7 +196,7 @@ class CribbageGame():
                         self.computerpegging(self.pegginglist)
                     elif events.type == timerevent:
                         self.removedumaque(False)
-            self.draw_card()
+            self.draw_cards()
     def blurSurface(surface, amt):
         scale = 1.0/float(amt)
         surf_size = surface.get_size()
@@ -311,7 +311,7 @@ class CribbageGame():
             cardposition=deck[card]
             deck[card]=deck[random_position]
             deck[random_position]=cardposition
-    def draw_cards(self, cardnumber:str,cardsuit:str,positionx:float,positiony:float,surface:Variable,highliting:Boolean):
+    def draw_card(self, cardnumber:str,cardsuit:str,positionx:float,positiony:float,surface:Variable,highliting:Boolean):
         global selectedcards
         if self.currentmode!=CHOOSING:
             if self.currentcrib==YOU:
@@ -374,22 +374,22 @@ class CribbageGame():
         if len(listofpeggingcards)-i >= 3:
             returnation += len(listofpeggingcards)-i
         return returnation
-def clickcard(posx : Variable or int, posy : Variable or int, cardsinhand : int):
-    posx=(posx-100)/50
-    if posx > cardsinhand-1 and posx<cardsinhand+1: posx=cardsinhand-1
-    if posx>=0 and posx<cardsinhand+1:
-        if posy>575 and posy<750:
-            posx=int(posx)
-            return posx
-    return None
-def clickbutton(posx : Variable or int, posy : Variable or int, sendtocrib_or_calculate_score: str):
-    if sendtocrib_or_calculate_score=="sendtocrib":
-        if posx>700 and posx<785:
-            if posy>700 and posy<785:
-                return True
-        return False
-    elif sendtocrib_or_calculate_score=="calculate score":
-        if posx>400-50 and posx<400+50:
-            if posy<611 and posy>527:
-                return True
-        return False
+    def clickcard(posx : Variable or int, posy : Variable or int, cardsinhand : int):
+        posx=(posx-100)/50
+        if posx > cardsinhand-1 and posx<cardsinhand+1: posx=cardsinhand-1
+        if posx>=0 and posx<cardsinhand+1:
+            if posy>575 and posy<750:
+                posx=int(posx)
+                return posx
+        return None
+    def clickbutton(posx : Variable or int, posy : Variable or int, sendtocrib_or_calculate_score: str):
+        if sendtocrib_or_calculate_score=="sendtocrib":
+            if posx>700 and posx<785:
+                if posy>700 and posy<785:
+                    return True
+            return False
+        elif sendtocrib_or_calculate_score=="calculate score":
+            if posx>400-50 and posx<400+50:
+                if posy<611 and posy>527:
+                    return True
+            return False
