@@ -2,9 +2,7 @@ import random
 from netrc import __all__
 import pyttsx3
 import os
-from tkinter import Variable
 import pygame
-from xmlrpc.client import Boolean
 import functools
 CHOOSING=1
 PICK_TURN_CARD=2
@@ -311,7 +309,7 @@ class CribbageGame():
             cardposition=deck[card]
             deck[card]=deck[random_position]
             deck[random_position]=cardposition
-    def draw_card(self, cardnumber:str,cardsuit:str,positionx:float,positiony:float,surface:Variable,highliting:Boolean):
+    def draw_card(self, cardnumber:str,cardsuit:str,positionx:float,positiony:float,surface:any,highliting:bool):
         global selectedcards
         if self.currentmode!=CHOOSING:
             if self.currentcrib==YOU:
@@ -338,7 +336,7 @@ class CribbageGame():
         print(cards)
         for card in cards:
             self.cardlist.remove(card)
-    def removedumaque(self, is_there_a_dumaque : Boolean):
+    def removedumaque(self, is_there_a_dumaque : bool):
         if is_there_a_dumaque==False:
             pass
         else:
@@ -374,7 +372,7 @@ class CribbageGame():
         if len(listofpeggingcards)-i >= 3:
             returnation += len(listofpeggingcards)-i
         return returnation
-    def clickcard(posx : Variable or int, posy : Variable or int, cardsinhand : int):
+    def clickcard(posx : int, posy : int, cardsinhand : int):
         posx=(posx-100)/50
         if posx > cardsinhand-1 and posx<cardsinhand+1: posx=cardsinhand-1
         if posx>=0 and posx<cardsinhand+1:
@@ -382,7 +380,7 @@ class CribbageGame():
                 posx=int(posx)
                 return posx
         return None
-    def clickbutton(posx : Variable or int, posy : Variable or int, sendtocrib_or_calculate_score: str):
+    def clickbutton(posx : int, posy : int, sendtocrib_or_calculate_score: str):
         if sendtocrib_or_calculate_score=="sendtocrib":
             if posx>700 and posx<785:
                 if posy>700 and posy<785:
