@@ -5,6 +5,7 @@ import os
 import pygame
 from fontTools.ttLib import TTFont
 import functools
+from cribbage_pickings import starter_pickings
 CHOOSING=1
 PICK_TURN_CARD=2
 PEGGING=3
@@ -20,7 +21,6 @@ engine=pyttsx3.init()
 current_directory = os.path.dirname(os.path.realpath(__file__))
 def draw_facedown_cards(card, positionx, positiony, surface):
     surface.blit(card, pygame.Rect(positionx, positiony, 100, 175))
-
 def intstr(card):
     if card=="10s"or card=="10c"or card=="10h"or card=="10d":
         cardnumber=10
@@ -38,7 +38,6 @@ def intstr(card):
     cardnumber=int(cardnumber)
     value=10 if cardnumber>=10 else cardnumber
     return cardnumber, cardsuit, value
-
 def clickcard(posx : int, posy : int, cardsinhand : int):
     posx=(posx-100)/50
     if posx > cardsinhand-1 and posx<cardsinhand+1: posx=cardsinhand-1
@@ -47,7 +46,6 @@ def clickcard(posx : int, posy : int, cardsinhand : int):
             posx=int(posx)
             return posx
     return None
-
 def clickbutton(posx : int, posy : int, sendtocrib_or_calculate_score: str):
     if sendtocrib_or_calculate_score=="sendtocrib":
         if posx>700 and posx<785:
@@ -59,7 +57,6 @@ def clickbutton(posx : int, posy : int, sendtocrib_or_calculate_score: str):
             if posy<611 and posy>527:
                 return True
         return False
-
 def check_points(hand):
     pairs = 0
     for index1, (card1, _, _)in enumerate(hand):
@@ -102,7 +99,6 @@ def check_points(hand):
     ad=add(0, hand)
     point=pairs+no+ru+ad
     return point
-
 class CribbageGame():
     def __init__(self):
         self.computerschoice=None
@@ -120,37 +116,44 @@ class CribbageGame():
         self.rollingballs=['dumaque', 'babies', 'bellies']
         self.criblist=[]
         self.countingpileforcomputer=[]
-        self.personprofile=0
         self.computerprofile=0
-        self.personname=0
-        self.computername=random.choices(['James','Robert','John','Michael','David','William','Richard','Joseph','Thomas','Charles', 'Christopher', 'Daniel', 'Mattew', 'Anthony', 'Mark', 'Donald', 'Steven', 'Paul', 'Andrew', 'Joshua'])[0]
+        self.starter_pickings = starter_pickings()
+        self.computername=random.choices(['James','Robert','John','Michael','David','William','Richard','Joseph','Thomas','Charles', 'Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen'])[0]
         self.screen = pygame.display.set_mode((800,800))
-
         fonts = map(lambda x: (x, pygame.font.match_font(x)), pygame.font.get_fonts())
-
         def char_in_font(unicode_char, font):
             for cmap in font['cmap'].tables:
                 if cmap.isUnicode():
                     if ord(unicode_char) in cmap.cmap:
                         return True
             return False
-
         def find_font_for_char(char):
             for font, fontpath in fonts:
                 ttf = TTFont(fontpath, fontNumber=0)   # specify the path to the font in question
                 if char_in_font(char, ttf):
                     return font
-
         self.cardfont = find_font_for_char("♣")
-
+    def start_round(self):
+        self.computerschoice=None
+        self.currentdrawing='drawcomputercards'
+        self.theturncard=None
+        self.currentcrib=self.currentcrib^1
+        self.selectedcards=[]
+        self.pegginglist=[]
+        self.message=""
+        self.countingpileforperson=[]
+        self.rollingballs=['dumaque', 'babies', 'bellies']
+        self.criblist=[]
+        self.countingpileforcomputer=[]
+        self.calculate_the_score=False
     def draw_cards(self):
         global cards
         self.screen.fill(pygame.Color(0, 0, 255))
         smallfont = pygame.font.SysFont('dejavuserif', 15)
-        text = smallfont.render(f'{self.personname} | {self.points} \n {self.computername} | {self.computerspoints}' , True , pygame.Color(0, 0, 0))
+        text = smallfont.render(f'{self.starter_pickings.personname} | {self.points} \n {self.computername} | {self.computerspoints}' , True , pygame.Color(0, 0, 0))
         self.screen.blit(text , (600, 550))
         smallfon = pygame.font.SysFont('dejavuserif', 15)
-        tex = smallfon.render(f'{self.personname} | {self.points} \n {self.computername} | {self.computerspoints}' , True , pygame.Color(0, 0, 0))
+        tex = smallfon.render(f'{self.starter_pickings.personname} | {self.points} \n {self.computername} | {self.computerspoints}' , True , pygame.Color(0, 0, 0))
         self.screen.blit(tex , (600, 550))
         for i, card in enumerate(self.countingpileforperson):
             self.draw_card(card[0], card[1], 470+i*5, 400, self.screen, False)
@@ -262,17 +265,39 @@ class CribbageGame():
                             if self.whosturn==YOU:
                                 self.personpegging(posx, posy, self.pegginglist)                                
                         elif self.currentmode==CHECK_POINTS:
-                            # Two error to fix:
-                            # - Button "Calculate the score" does not disappear when job is done
-                            # - There is only one round, go up until someone hits 120 points
+                            # Blursurface is for the starter-pickings
+                            # No errors to fix! Time to start the starter-pickings! That includes profile, name, and arteficial intelligence. After, ask them to turn up the volume. Make a button that says ok, and that will start the game after "Can you turn up your volume?" Beside the button, it will say"I would rather not" as a button and just start the game in that case.
                             yesorno=clickbutton(posx, posy, "calculate score")
                             if yesorno==True:
-                                mostpoints=check_points(self.countingpileforperson)
-                                self.points+=mostpoints
-                                mostcomputerpoints=check_points(self.countingpileforcomputer)
-                                self.computerspoints+=mostcomputerpoints
+                                if self.currentcrib==COMPUTER:
+                                    mostpoints=check_points(self.countingpileforperson)
+                                    self.points+=mostpoints
+                                    mostcomputerpoints=check_points(self.countingpileforcomputer)
+                                    self.computerspoints+=mostcomputerpoints
+                                    thecribpoint=check_points(self.criblist)
+                                    self.computerspoints+=thecribpoint
+                                elif self.currentcrib==YOU:
+                                    mostcomputerpoints=check_points(self.countingpileforcomputer)
+                                    self.computerspoints+=mostcomputerpoints
+                                    mostpoints=check_points(self.countingpileforperson)
+                                    self.points+=mostpoints
+                                    thecribpoints=check_points(self.criblist)
+                                    self.points+=thecribpoints
                                 if self.points<120 and self.computerspoints<120:
-                                    self.currentmode==CHOOSING
+                                    self.currentmode=CHOOSING
+                                    self.start_round()
+                                    self.deal()
+                                elif self.points>120 or self.computerspoints>120:
+                                    blur=self.blurSurface(5)
+                                    self.screen.blit(blur, (0-800, 0-800))
+                                    if self.points>120:
+                                        smallfo=pygame.font.SysFont('dejavuserif',50)
+                                        te = smallfo.render('You win',True,pygame.Color(0, 0, 0))
+                                        self.screen.blit(te , (400, 400))
+                                    elif self.computerspoints>120:
+                                        bigfont=pygame.font.SysFont('dejavuserif',30)
+                                        thetext = bigfont.render('You lose',True,pygame.Color(0, 0, 0))
+                                        self.screen.blit(thetext , (400, 400))
                     elif events.type == turnevent:
                         self.computerpegging(self.pegginglist)
                     elif events.type == timerevent:
@@ -285,6 +310,8 @@ class CribbageGame():
         surf = pygame.transform.smoothscale(surface, scale_size)
         surf = pygame.transform.smoothscale(surf, surf_size)
         return surf
+    def fadeSurface(self, amount):
+        self.screen.set_alpha(amount)
     def validcards(self, cards):
         global thecardsthatarevalid
         total=self.peggingTotal(self.pegginglist)
@@ -341,7 +368,6 @@ class CribbageGame():
                 self.godeclaration()            
     cardlist=[intstr(card)for card in["as","ah","ad","ac","2d","2h","2s","2c","3h","3d","3s","3c","4h","4c","4s","4d","5h","5d","5s","5c","6h","6d","6s","6c","7h","7d","7s","7c","8h","8d","8s","8c","9h","9d","9s","9c","10h","10d","10s","10c","jh","js","jd","jc","qh","qd","qs","qc","kh","kd","ks","kc"]]
     hand=random.sample(cardlist, 4)
-    print(hand)
     facedowncard=pygame.image.load(os.path.join(current_directory, "playing-card-back.jpg"))
     facescards={(cardnumber,suit): pygame.image.load(os.path.join(current_directory, f"pixil-frame-0({cardnumber}{suit}).png")) for cardnumber,suit,_ in cardlist if cardnumber>10}
     def shuffle(deck):
@@ -374,7 +400,6 @@ class CribbageGame():
     def deal(self):
         global cards
         cards=random.sample(self.cardlist, 6)
-        print(cards)
         for card in cards:
             self.cardlist.remove(card)
     def removedumaque(self, is_there_a_dumaque : bool):
@@ -413,4 +438,3 @@ class CribbageGame():
         if len(listofpeggingcards)-i >= 3:
             returnation += len(listofpeggingcards)-i
         return returnation
-
