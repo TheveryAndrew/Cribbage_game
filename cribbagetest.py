@@ -1,24 +1,17 @@
-from cribbagegame import CribbageGame
 import pygame
-import time
-import unittest
-class Blurtest(unittest.TestCase):
-    def test_blursurface(self):
-        cribbage_game = CribbageGame()
-        cribbage_game.deal()
-        cribbage_game.draw_cards()
-        timevar=10
-        for i in range(0, 10):
-            time.sleep(1)
-        timevar=timevar-1
-        while timevar<10:
-            blurSurface(cribbage_game.screen, 2)
-def blurSurface(surface, amt):
-    scale = 1.0/float(amt)
-    surf_size = surface.get_size()
-    scale_size = (int(surf_size[0]*scale), int(surf_size[1]*scale))
-    surf = pygame.transform.smoothscale(surface, scale_size)
-    surf = pygame.transform.smoothscale(surf, surf_size)
-    return surf
-if __name__ =="__main__":
-    unittest.main()
+import os
+pygame.init()
+current_directory = os.path.dirname(os.path.realpath(__file__))
+screen = pygame.display.set_mode((800, 800))
+computerprofile=pygame.image.load(os.path.join(current_directory, "man-in-questioning-thoughts-clipart.jpg"))
+font=pygame.font.SysFont('dejavuserif',20)
+atext = font.render('Choose a profile:', True, pygame.Color(0, 0, 0))
+screen.blit(atext , (400, 20))
+while True:
+    event = pygame.event.get()
+    screen.fill(pygame.Color(25, 60, 25))
+    pygame.display.update()
+    screen.blit(screen, (50, 50), computerprofile)
+    for events in event:
+        if events.type==pygame.quit:
+            pygame.QUIT()
